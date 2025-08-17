@@ -6,7 +6,7 @@ import hashlib
 import time
 import hmac
 import secrets
-from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY, HASH_CANDIDATE_SERVER_KEY
+from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY
 
 app = Flask(__name__)
 DB_FILE = 'database.db'
@@ -123,16 +123,15 @@ def vote(user_id):
             return "User already voted!"
         
         # retrieve user choice
-        candidate_name = request.form['option']
+        name = request.form['option']
 
         # find candidate information
-        candidate_hash = hmac.new(HASH_CANDIDATE_SERVER_KEY, candidate_name.encode(), hashlib.sha256).hexdigest()
-        cursor.execute("SELECT * FROM Candidates WHERE candidate_hash=(?)", (candidate_hash,))
+        cursor.execute("SELECT * FROM Candidates WHERE name=(?)", (name,))
         candidate_rows = cursor.fetchall()
 
         # TODO: decrypt this value
         candidate_votes = candidate_rows[0][1]
-        cursor.execute("UPDATE Candidates SET votes = (?) WHERE candidate_hash=(?)", (candidate_votes+1, candidate_hash,))
+        cursor.execute("UPDATE Candidates SET votes = (?) WHERE name=(?)", (candidate_votes+1, name,))
         # TODO: encrypt
         conn.commit()
 
