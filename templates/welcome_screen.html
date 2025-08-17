@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+
+<head>
+    <title>VOTING 2025</title>
+    <script>
+        // javascript function to send response back to backend and generate OTP
+        async function Generate_OTP() {
+            // retrieve the id field and make sure it exists
+            const userId = document.getElementById("id").value;
+
+            if (!userId) {
+                alert("Please enter your ID first in order to generate new OTP");
+                return;
+            }
+
+            try {
+                // send request to back end
+                const response = await fetch("/generate_otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                // if response it ok and valid, send the OTP
+                if (response.ok) {
+                    const data = await response.json();
+                    alert("New OTP generated: " + data.otp + "\ncheck your mobile phone/email in real time scenario");
+                } else {
+                    alert("Failed to generate OTP");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error generating OTP");
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h1>LOGIN</h1>
+    <form action="/sign_in" method="post">
+
+        <label for="id">Id:</label>
+        <input type="text" id="id" name="user_id" required>
+        
+        <br><br>
+
+        <label for="OTP">OTP:</label>
+        <input type="text" id="OTP" name="user_otp" required>
+
+        <br><br>
+        
+        <button type="submit">confirm Id and OTP</button>
+
+        <br><br>
+
+        <button type="button" onclick="Generate_OTP()">Generate OTP</button>
+    </form>
+    
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+
+<head>
+    <title>VOTING 2025</title>
+</head>
+
+<body>
+    <h1>Vote for your candidate</h1>
+    <form action="/vote/{{ user_id }}" method="post">
+        <input type="radio" name="option" value="Bob" required> Bob<br>
+        <input type="radio" name="option" value="John"> John<br>
+        <input type="radio" name="option" value="Alice"> Alice<br>
+        <input type="radio" name="option" value="Jack"> Jack<br>
+        <input type="radio" name="option" value="Eric"> Eric<br>
+        <input type="radio" name="option" value="Hillary"> Hillary<br>
+        <button type="submit">Submit Vote</button>
+    </form>
+</body>
+
+</html>
