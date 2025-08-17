@@ -6,7 +6,7 @@ import hashlib
 import time
 import hmac
 import secrets
-from constants import INTERVAL_SIZE, hash_server_key
+from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY, HASH_CANDIDATE_SERVER_KEY
 
 app = Flask(__name__)
 DB_FILE = 'database.db'
@@ -32,7 +32,7 @@ def generate_otp():
     cursor = conn.cursor()
 
     # search if id exists (based on hash)
-    hashed_id = hmac.new(hash_server_key, user_id.encode(), hashlib.sha256).hexdigest()
+    hashed_id = hmac.new(HASH_ID_SERVER_KEY, user_id.encode(), hashlib.sha256).hexdigest()
     
     # update if not present
     cursor.execute("SELECT * FROM Ids WHERE id_hash=(?)", (hashed_id,))
@@ -40,7 +40,12 @@ def generate_otp():
 
     # if row does not exist in table
     if len(Otp_row) == 0:
-        return "invalid id"
+        return "Invalid id"
+    
+    # check if user already voted - no OTP generation
+    voted = Otp_row[0][1]
+    if voted == '1':
+        return "User already voted!"
         
     # generate otp
     expire_time = int(time.time()) + INTERVAL_SIZE  # valid for 30s
@@ -69,10 +74,9 @@ def sign_in():
     cursor = conn.cursor()
 
     # search if id exists (based on hash)
-    hashed_id = hmac.new(hash_server_key, user_id.encode(), hashlib.sha256).hexdigest()
+    hashed_id = hmac.new(HASH_ID_SERVER_KEY, user_id.encode(), hashlib.sha256).hexdigest()
     cursor.execute("SELECT * FROM Ids WHERE id_hash=(?)", (hashed_id,))
     ids_rows = cursor.fetchall()
-
 
     if len(ids_rows) == 0:
         return "Invalid id"
@@ -108,27 +112,33 @@ def vote(user_id):
     # if we post data
     if request.method == "POST":
         # check if user already voted - tried going back in the browser
-        cursor.execute("SELECT voted FROM Ids WHERE id=(?)", (user_id,))
+        hashed_id = hmac.new(HASH_ID_SERVER_KEY, user_id.encode(), hashlib.sha256).hexdigest()
+        cursor.execute("SELECT voted FROM Ids WHERE id_hash=(?)", (hashed_id,))
         row = cursor.fetchone()
+        
+        # TODO: decrypt
         did_vote = row[0]
 
         if did_vote == '1':
             return "User already voted!"
         
         # retrieve user choice
-        option = request.form['option']
+        candidate_name = request.form['option']
 
         # find candidate information
-        cursor.execute("SELECT * FROM Candidates WHERE candidate=(?)", (option,))
+        candidate_hash = hmac.new(HASH_CANDIDATE_SERVER_KEY, candidate_name.encode(), hashlib.sha256).hexdigest()
+        cursor.execute("SELECT * FROM Candidates WHERE candidate_hash=(?)", (candidate_hash,))
         candidate_rows = cursor.fetchall()
 
         # TODO: decrypt this value
         candidate_votes = candidate_rows[0][1]
-        cursor.execute("UPDATE Candidates SET votes = (?) WHERE candidate=(?)", (candidate_votes+1, option,))
+        cursor.execute("UPDATE Candidates SET votes = (?) WHERE candidate_hash=(?)", (candidate_votes+1, candidate_hash,))
+        # TODO: encrypt
         conn.commit()
 
         # update that voter has voted
-        cursor.execute("UPDATE Ids SET voted = (?) WHERE id=(?)", (1, user_id,))
+        cursor.execute("UPDATE Ids SET voted = (?) WHERE id_hash=(?)", (1, hashed_id,))
+        # TODO: encrypt
         conn.commit()
         conn.close()
 
