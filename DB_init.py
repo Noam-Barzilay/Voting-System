@@ -2,7 +2,7 @@ import sqlite3
 import constants
 import hmac
 import hashlib
-from constants import hash_server_key
+from constants import HASH_ID_SERVER_KEY, HASH_CANDIDATE_SERVER_KEY
 
 
 # TODO: need to encrypt all database (besides hash value of id)
@@ -17,7 +17,7 @@ def db_init():
     # (candidate, number of votes they got)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Candidates (
-        candidate TEXT PRIMARY KEY,
+        candidate_hash TEXT PRIMARY KEY,
         votes INT
     )
     """)
@@ -25,7 +25,8 @@ def db_init():
     # create the rows in Candidates
     for name in constants.candidates:
         # Insert data - use (?, ?) to avoid sql injection - handled by sqlite
-        cursor.execute("INSERT INTO Candidates (candidate, votes) VALUES (?, ?)", (name, 0))
+        cursor.execute("INSERT INTO Candidates (candidate_hash, votes) VALUES (?, ?)",
+                        (hmac.new(HASH_CANDIDATE_SERVER_KEY, name.encode(), hashlib.sha256).hexdigest(), 0))
         conn.commit()
 
 
@@ -44,7 +45,7 @@ def db_init():
     for id_ in constants.ids:
         # Insert data - use (?) to avoid sql injection - handled by sqlite
         cursor.execute("INSERT INTO Ids (id_hash, voted, OTP, expire_time) VALUES (?, ?, ?, ?)",
-                        (hmac.new(hash_server_key, id_.encode(), hashlib.sha256).hexdigest(), 0, "dummy", 0))
+                        (hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest(), 0, "dummy", 0))
         conn.commit()
 
     # Create tokens table
