@@ -44,14 +44,14 @@ def db_init():
     for id_ in constants.ids:
         # Insert data - use (?) to avoid sql injection - handled by sqlite
         cursor.execute("INSERT INTO Ids (id_hash, voted, OTP, expire_time) VALUES (?, ?, ?, ?)",
-                        (hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest(), 0, "dummy", 0))
+                        (hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest(), '0', "dummy", 0))
         conn.commit()
 
     # Create tokens table
-    # (token, was the token used (1 - yes, 0 - no))
+    # (token hash (HMAC), was the token used (1 - yes, 0 - no))
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Tokens (
-        token TEXT PRIMARY KEY,
+        token_hash TEXT PRIMARY KEY,
         used char(1)
     )
     """)
@@ -59,12 +59,12 @@ def db_init():
     # insert only then to this table
 
     # Create voting table
-    # (token, signature of confirming the voting)
+    # (token hash (HMAC), signature of confirming the voting)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Signatures (
-        token TEXT,
+        token_hash TEXT,
         signature TEXT,
-        FOREIGN KEY (token) REFERENCES Tokens(token)
+        FOREIGN KEY (token_hash) REFERENCES Tokens(token_hash)
     )
     """)
     # after user votes, sign by their name with the systems private key by associating the token used
