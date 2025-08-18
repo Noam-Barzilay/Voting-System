@@ -6,13 +6,18 @@ import hashlib
 import time
 import hmac
 import secrets
-from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY
+from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY, HASH_TOKEN_SERVER_KEY
 
 app = Flask(__name__)
 DB_FILE = 'database.db'
 
-
 # TODO: need to decrypt retrieved rows and encrypt them back (besides hash value of id)
+
+# function to generate token for voter's session
+def generate_session_token():
+    token = secrets.token_hex(32)
+    return token  # 64-char
+
 
 @app.route('/')
 def index():
@@ -22,6 +27,8 @@ def index():
 
 @app.route('/generate_otp', methods=['POST'])
 def generate_otp():
+    # generate otp regardless if user voted or not - adds a layer of protection against an adversary who has the id
+    # of a user and wants to confirm this user voted - only valid otp will reveal that
     data = request.get_json()
     user_id = data.get("user_id")
     if not user_id:
@@ -41,11 +48,6 @@ def generate_otp():
     # if row does not exist in table
     if len(Otp_row) == 0:
         return "Invalid id"
-    
-    # check if user already voted - no OTP generation
-    voted = Otp_row[0][1]
-    if voted == '1':
-        return "User already voted!"
         
     # generate otp
     expire_time = int(time.time()) + INTERVAL_SIZE  # valid for 30s
@@ -98,9 +100,41 @@ def sign_in():
     # if voter have not voted yet, procceed
     if did_vote == '0':
         conn.close()
-        return redirect(url_for('vote', user_id=user_id))
+        return redirect(url_for('get_token', user_id=user_id))
     else:
         return "You have already voted!"
+    
+
+@app.route('/get_token/<user_id>', methods=['GET', 'POST'])
+def get_token(user_id):
+    if request.method == "POST":
+        return redirect(url_for('vote', user_id=user_id))
+
+    else:  # GET request
+        # connect and load db
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+
+        # generate token upon authentication
+        token_rows, generated_token, hashed_token = [0], "", ""
+
+        # while generated token is already in table, generate a new one
+        while (len(token_rows) > 0):
+            # generate random token
+            generated_token = generate_session_token()
+            hashed_token = hmac.new(HASH_TOKEN_SERVER_KEY, generated_token.encode(), hashlib.sha256).hexdigest()
+            cursor.execute("SELECT * FROM Tokens WHERE token_hash=(?)", (hashed_token,))
+            token_rows = cursor.fetchall()
+
+        # update DB 
+        # insert into tokens table
+        #TODO: encrypt
+        cursor.execute("INSERT INTO Tokens (token_hash, used) VALUES (?, ?)", (hashed_token, '0'))
+        conn.commit()
+
+        conn.close()
+        return render_template('token_screen.html', user_id=user_id, generated_token=generated_token)
+
 
 
 @app.route('/vote/<user_id>', methods=['GET', 'POST'])
@@ -122,8 +156,20 @@ def vote(user_id):
         if did_vote == '1':
             return "User already voted!"
         
-        # retrieve user choice
+        # retrieve user choice and token
         name = request.form['option']
+        token = request.form['token']
+
+        # make sure token is not present yet/not used yet
+        hashed_token = hmac.new(HASH_TOKEN_SERVER_KEY, token.encode(), hashlib.sha256).hexdigest()
+        cursor.execute("SELECT * FROM Tokens WHERE token_hash=(?)", (hashed_token,))
+        token_rows = cursor.fetchall()
+
+        if len(token_rows) > 0 and token_rows[0][1] == '1':
+            return "Token already used"
+        
+        if len(token_rows) == 0:
+            return "Invalid token"
 
         # find candidate information
         cursor.execute("SELECT * FROM Candidates WHERE name=(?)", (name,))
@@ -136,7 +182,12 @@ def vote(user_id):
         conn.commit()
 
         # update that voter has voted
-        cursor.execute("UPDATE Ids SET voted = (?) WHERE id_hash=(?)", (1, hashed_id,))
+        cursor.execute("UPDATE Ids SET voted = (?) WHERE id_hash=(?)", ('1', hashed_id,))
+        # TODO: encrypt
+        conn.commit()
+
+        # update that token has been used
+        cursor.execute("UPDATE Tokens SET used = (?) WHERE token_hash=(?)", ('1', hashed_token,))
         # TODO: encrypt
         conn.commit()
         conn.close()
