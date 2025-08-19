@@ -70,3 +70,53 @@ def db_init():
     # after user votes, sign by their name with the systems private key by associating the token used
 
     conn.close()
+
+
+def display_db():
+    # Connect to database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Candidates")
+    rows = cursor.fetchall()
+    print("Candidates table:")
+    for row in rows:
+        print(row)
+
+    cursor.execute("SELECT * FROM Ids")
+    rows = cursor.fetchall()
+    print("Ids table:")
+    for row in rows:
+        print(row)
+
+    cursor.execute("SELECT * FROM Tokens")
+    rows = cursor.fetchall()
+    print("Tokens table:")
+    for row in rows:
+        print(row)
+
+    cursor.execute("SELECT * FROM Signatures")
+    rows = cursor.fetchall()
+    print("Signatures table:")
+    for row in rows:
+        print(row)
+
+    conn.close()
+
+
+def clear_db():
+    # Connect to database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("DROP TABLE IF EXISTS Candidates")
+    conn.commit()
+    cursor.execute("DROP TABLE IF EXISTS Ids")
+    conn.commit()
+    cursor.execute("DROP TABLE IF EXISTS Tokens")
+    conn.commit()
+    cursor.execute("DROP TABLE IF EXISTS Signatures")
+    conn.commit()
+    cursor.execute("DROP TABLE IF EXISTS Otps")
+    conn.commit()
+
+    conn.close()
