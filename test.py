@@ -1,7 +1,12 @@
 import sqlite3
-from DB_init import db_init
-import pyotp
+from DB import db_init, display_db, clear_db
+import secrets
 import time
+import os
+from constants import HASH_ID_SERVER_KEY, HASH_TOKEN_SERVER_KEY
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import ciphers
+import hmac
 
 """
 HMAC of user id is deterministic and protects user's privacy
@@ -31,64 +36,49 @@ Who voted and when
 Correlate time of access with external observations
 """
 
-
-conn = sqlite3.connect('database.db')
-cursor = conn.cursor()
-
 # # CLEAR DATABASE
-# cursor.execute("DROP TABLE IF EXISTS Candidates")
-# conn.commit()
-# cursor.execute("DROP TABLE IF EXISTS Ids")
-# conn.commit()
-# cursor.execute("DROP TABLE IF EXISTS Tokens")
-# conn.commit()
-# cursor.execute("DROP TABLE IF EXISTS Signatures")
-# conn.commit()
-# cursor.execute("DROP TABLE IF EXISTS Otps")
-# conn.commit()
+# clear_db()
 
 # # INITIALIZE DATABASE
 # db_init()
 
-# Show all rows
+# SHOW DATABASE - encrypted
+display_db()
+
+print("\n---------------------------------------------------------------\n")
+
+# SHOW DATABASE - decrypted (candidates and ids)
+# Connect to database
+conn = sqlite3.connect('database.db')
+cursor = conn.cursor()
+
 cursor.execute("SELECT * FROM Candidates")
 rows = cursor.fetchall()
 print("Candidates table:")
 for row in rows:
-    print(row)
+    name, votes, nonce = row
+    votes = ciphers.candidates_cipher.decrypt(nonce, votes, f"candidates_table,name={name}".encode()).decode()
+    print(name, votes, nonce)
 
-# Show all rows
+
 cursor.execute("SELECT * FROM Ids")
 rows = cursor.fetchall()
 print("Ids table:")
 for row in rows:
-    print(row)
+    id_hash, voted, otp, expire_time, nonce = row
 
-# Show all rows
-cursor.execute("SELECT * FROM Tokens")
-rows = cursor.fetchall()
-print("Tokens table:")
-for row in rows:
-    print(row)
+    voted = ciphers.ids_cipher.decrypt(nonce, voted, f"ids_table,hash={id_hash}".encode()).decode()
+    otp = ciphers.ids_cipher.decrypt(nonce, otp, f"ids_table,hash={id_hash}".encode()).decode()
+    expire_time = ciphers.ids_cipher.decrypt(nonce, expire_time, f"ids_table,hash={id_hash}".encode()).decode()
 
-# Show all rows
-cursor.execute("SELECT * FROM Signatures")
-rows = cursor.fetchall()
-print("Signatures table:")
-for row in rows:
-    print(row)
+    print(id_hash, voted, otp, expire_time, nonce)
 
-"""
-OTP treatment
-"""
-# secret_key = pyotp.random_base32()
 
-# start_time = int(time.time())
-# # Generate TOTP object based on the key - 10 digits to prevent brute force attack success
-# totp = pyotp.TOTP(secret_key, digits=10)
-# print(f"totp = {totp.now()}")
 
-# user_input = input("Enter OTP: ")
-# # Verify OTP entered by the user
-# if pyotp.TOTP(secret_key).verify(user_input):
-#     print("verified!")
+# print(ciphers.candidates_nonces)
+# print(ciphers.ids_nonces)
+# k = AESGCM.generate_key(128)
+# cipher = AESGCM(k)
+# nonce = os.urandom(12)
+# cipher_text = cipher.encrypt(nonce, b'0', b'data to authenticate')
+# print(d.decode())
