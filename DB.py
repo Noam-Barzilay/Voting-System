@@ -3,10 +3,13 @@ import constants
 import hmac
 import hashlib
 from constants import HASH_ID_SERVER_KEY
+import os
+from ciphers import candidates_cipher, ids_cipher
 
 
 # TODO: need to encrypt all database (besides hash value of id)
 # have a different key for each table
+# never reuse the same nonce with the same key, but store the nonce publicly
 
 def db_init():
     # Connect to database
@@ -14,18 +17,24 @@ def db_init():
     cursor = conn.cursor()
 
     # Create Candidates table
-    # (candidate, number of votes they got)
+    # (candidate, number of votes they got, nonce of the row)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Candidates (
         name TEXT PRIMARY KEY,
-        votes INT
+        votes INT,
+        nonce TEXT
     )
     """)
 
     # create the rows in Candidates
     for name in constants.candidates:
+        nonce = os.urandom(12)
+
+        # customized candidate tag
+        encrypted_votes = candidates_cipher.encrypt(nonce, b'0', f"candidates_table,name={name}".encode())
+
         # Insert data - use (?, ?) to avoid sql injection - handled by sqlite
-        cursor.execute("INSERT INTO Candidates (name, votes) VALUES (?, ?)", (name, 0))
+        cursor.execute("INSERT INTO Candidates (name, votes, nonce) VALUES (?, ?, ?)", (name, encrypted_votes, nonce))
         conn.commit()
 
 
@@ -36,16 +45,27 @@ def db_init():
         id_hash TEXT PRIMARY KEY,
         voted char(1),
         OTP TEXT,
-        expire_time INT
+        expire_time INT,
+        nonce TEXT
     )
     """)
 
     # create the rows in Ids
     for id_ in constants.ids:
+        nonce = os.urandom(12)
+        id_hash = hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest()
+
+        # customized user tag
+
+        voted_encrypted = ids_cipher.encrypt(nonce, b'0', f"ids_table,hash={id_hash}".encode())
+        otp_encrypted = ids_cipher.encrypt(nonce, b'dummy', f"ids_table,hash={id_hash}".encode())
+        expire_time_encrypted = ids_cipher.encrypt(nonce, b'00', f"ids_table,hash={id_hash}".encode())
+
         # Insert data - use (?) to avoid sql injection - handled by sqlite
-        cursor.execute("INSERT INTO Ids (id_hash, voted, OTP, expire_time) VALUES (?, ?, ?, ?)",
-                        (hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest(), '0', "dummy", 0))
+        cursor.execute("INSERT INTO Ids (id_hash, voted, OTP, expire_time, nonce) VALUES (?, ?, ?, ?, ?)",
+                        (id_hash, voted_encrypted, otp_encrypted, expire_time_encrypted, nonce))
         conn.commit()
+
 
     # Create tokens table
     # (token hash (HMAC), was the token used (1 - yes, 0 - no))
