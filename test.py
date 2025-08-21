@@ -57,7 +57,7 @@ rows = cursor.fetchall()
 print("Candidates table:")
 for row in rows:
     name, votes, nonce = row
-    votes = ciphers.candidates_cipher.decrypt(nonce, votes, f"candidates_table,name={name}".encode()).decode()
+    votes = int(ciphers.candidates_cipher.decrypt(nonce, votes, f"candidates_table,name={name}".encode()).decode())
     print(name, votes, nonce)
 
 
@@ -69,7 +69,7 @@ for row in rows:
 
     voted = ciphers.ids_cipher.decrypt(nonce, voted, f"ids_table,hash={id_hash}".encode()).decode()
     otp = ciphers.ids_cipher.decrypt(nonce, otp, f"ids_table,hash={id_hash}".encode()).decode()
-    expire_time = ciphers.ids_cipher.decrypt(nonce, expire_time, f"ids_table,hash={id_hash}".encode()).decode()
+    expire_time = int(ciphers.ids_cipher.decrypt(nonce, expire_time, f"ids_table,hash={id_hash}".encode()).decode())
 
     print(id_hash, voted, otp, expire_time, nonce)
 
