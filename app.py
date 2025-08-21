@@ -7,6 +7,9 @@ import time
 import hmac
 import secrets
 from constants import INTERVAL_SIZE, HASH_ID_SERVER_KEY, HASH_TOKEN_SERVER_KEY
+import os
+from ciphers import ids_cipher, candidates_cipher
+
 
 app = Flask(__name__)
 DB_FILE = 'database.db'
@@ -48,15 +51,28 @@ def generate_otp():
     # if row does not exist in table
     if len(Otp_row) == 0:
         return "Invalid id"
-        
+    
+    # get nonce
+    nonce = Otp_row[0][4]
+
+    # decrypt voted
+    voted = ids_cipher.decrypt(nonce, Otp_row[0][1], f"ids_table,hash={hashed_id}".encode())
+
     # generate otp
     expire_time = int(time.time()) + INTERVAL_SIZE  # valid for 30s
     otp = str(secrets.randbelow(10**10)).zfill(10)  # 10-digit random OTP
 
+    # create new nonce
+    nonce = os.urandom(12)
+
+    # encrypt new values and voted too
+    voted_encrypted = ids_cipher.encrypt(nonce, voted, f"ids_table,hash={hashed_id}".encode())
+    otp_encrypted = ids_cipher.encrypt(nonce, otp.encode(), f"ids_table,hash={hashed_id}".encode())
+    encrypted_expire_time = ids_cipher.encrypt(nonce, str(expire_time).encode(), f"ids_table,hash={hashed_id}".encode())
+
     # update otp and expire time
-    # TODO: encrypt new values
-    cursor.execute("UPDATE Ids SET otp = (?), expire_time = (?) WHERE id_hash = (?)",
-                    (otp, expire_time, hashed_id,))
+    cursor.execute("UPDATE Ids SET voted = (?), otp = (?), expire_time = (?), nonce = (?) WHERE id_hash = (?)",
+                    (voted_encrypted, otp_encrypted, encrypted_expire_time, nonce, hashed_id,))
     conn.commit()
     cursor.close()
 
@@ -84,8 +100,11 @@ def sign_in():
         return "Invalid id"
 
     # retieve otp information
-    # TODO: decrypt
-    _, _, otp, expire_time = ids_rows[0]
+    _, voted, otp, expire_time, nonce = ids_rows[0]
+
+    # decrypt
+    otp = ids_cipher.decrypt(nonce, otp, f"ids_table,hash={hashed_id}".encode()).decode()
+    expire_time = int(ids_cipher.decrypt(nonce, expire_time, f"ids_table,hash={hashed_id}".encode()).decode())
 
     # get cur time stamp
     current_time = int(time.time())
@@ -94,8 +113,7 @@ def sign_in():
     if current_time >= expire_time or user_otp != otp:
         return "Invalid OTP"
 
-    # TODO: decrypt this value
-    did_vote = ids_rows[0][1]
+    did_vote = ids_cipher.decrypt(nonce, voted, f"ids_table,hash={hashed_id}".encode()).decode()
         
     # if voter have not voted yet, procceed
     if did_vote == '0':
@@ -128,10 +146,10 @@ def get_token(user_id):
 
         # update DB 
         # insert into tokens table
-        #TODO: encrypt
+        #TODO: maybe encrypt used
         cursor.execute("INSERT INTO Tokens (token_hash, used) VALUES (?, ?)", (hashed_token, '0'))
         conn.commit()
-
+        
         conn.close()
         return render_template('token_screen.html', user_id=user_id, generated_token=generated_token)
 
@@ -147,12 +165,16 @@ def vote(user_id):
     if request.method == "POST":
         # check if user already voted - tried going back in the browser
         hashed_id = hmac.new(HASH_ID_SERVER_KEY, user_id.encode(), hashlib.sha256).hexdigest()
-        cursor.execute("SELECT voted FROM Ids WHERE id_hash=(?)", (hashed_id,))
-        row = cursor.fetchone()
+        cursor.execute("SELECT * FROM Ids WHERE id_hash=(?)", (hashed_id,))
+        ids_rows = cursor.fetchall()
         
-        # TODO: decrypt
-        did_vote = row[0]
+        # decrypt
+        _, voted, otp, expire_time, ids_nonce = ids_rows[0]
 
+        did_vote = ids_cipher.decrypt(ids_nonce, voted, f"ids_table,hash={hashed_id}".encode()).decode()
+        otp = ids_cipher.decrypt(ids_nonce, otp, f"ids_table,hash={hashed_id}".encode())
+        expire_time = ids_cipher.decrypt(ids_nonce, expire_time, f"ids_table,hash={hashed_id}".encode())
+        
         if did_vote == '1':
             return "User already voted!"
         
@@ -175,27 +197,41 @@ def vote(user_id):
         cursor.execute("SELECT * FROM Candidates WHERE name=(?)", (name,))
         candidate_rows = cursor.fetchall()
 
-        # TODO: decrypt this value
-        candidate_votes = candidate_rows[0][1]
-        cursor.execute("UPDATE Candidates SET votes = (?) WHERE name=(?)", (candidate_votes+1, name,))
-        # TODO: encrypt
+        name, votes, candidate_nonce = candidate_rows[0]
+
+        # decrypt candidate's votes count
+        candidate_votes = int(candidates_cipher.decrypt(candidate_nonce, votes, f"candidates_table,name={name}".encode()).decode())
+
+        # update candidates table and encrypt back (increment candidate_votes)
+        # create new nonce
+        new_candidate_nonce = os.urandom(12)
+        encrypted_votes = candidates_cipher.encrypt(new_candidate_nonce, str(candidate_votes+1).encode(),
+                                                     f"candidates_table,name={name}".encode())
+        cursor.execute("UPDATE Candidates SET votes = (?), nonce = (?) WHERE name=(?)",
+                        (encrypted_votes, new_candidate_nonce, name,))
         conn.commit()
 
-        # update that voter has voted
-        cursor.execute("UPDATE Ids SET voted = (?) WHERE id_hash=(?)", ('1', hashed_id,))
-        # TODO: encrypt
+        # update that voter has voted and encrypt back
+        # create new nonce
+        new_ids_nonce = os.urandom(12)
+        # encrypt all values in row
+        voted_encrypted = ids_cipher.encrypt(new_ids_nonce, b'1', f"ids_table,hash={hashed_id}".encode())
+        otp_encrypted = ids_cipher.encrypt(new_ids_nonce, otp, f"ids_table,hash={hashed_id}".encode())
+        expire_time_encrypted = ids_cipher.encrypt(new_ids_nonce, expire_time, f"ids_table,hash={hashed_id}".encode())
+
+        cursor.execute("UPDATE Ids SET voted = (?), OTP = (?), expire_time = (?), nonce = (?) WHERE id_hash=(?)",
+                        (voted_encrypted, otp_encrypted, expire_time_encrypted, new_ids_nonce, hashed_id,))
         conn.commit()
 
         # update that token has been used
         cursor.execute("UPDATE Tokens SET used = (?) WHERE token_hash=(?)", ('1', hashed_token,))
-        # TODO: encrypt
         conn.commit()
         conn.close()
 
         # redirect to final page
         return redirect(url_for("last_page"))
     
-    # if we just got here from welcome screen
+    # if we just got here from token screen
     else:  # GET request
         return render_template('vote.html', user_id=user_id)
 
