@@ -7,9 +7,10 @@ import os
 from ciphers import candidates_cipher, ids_cipher
 
 
-# TODO: need to encrypt all database (besides hash value of id)
+# encrypt all database (besides hash value of id)
 # have a different key for each table
 # never reuse the same nonce with the same key, but store the nonce publicly
+# with each enryption to insert/update database - generate newe nonce and encrypt all row back (besides hash)
 
 def db_init():
     # Connect to database
@@ -31,6 +32,7 @@ def db_init():
         nonce = os.urandom(12)
 
         # customized candidate tag
+        # votes need to be casted to int after decryption
         encrypted_votes = candidates_cipher.encrypt(nonce, b'0', f"candidates_table,name={name}".encode())
 
         # Insert data - use (?, ?) to avoid sql injection - handled by sqlite
@@ -56,9 +58,10 @@ def db_init():
         id_hash = hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest()
 
         # customized user tag
-
         voted_encrypted = ids_cipher.encrypt(nonce, b'0', f"ids_table,hash={id_hash}".encode())
         otp_encrypted = ids_cipher.encrypt(nonce, b'dummy', f"ids_table,hash={id_hash}".encode())
+
+        # expire_time need to be casted to int after decryption
         expire_time_encrypted = ids_cipher.encrypt(nonce, b'00', f"ids_table,hash={id_hash}".encode())
 
         # Insert data - use (?) to avoid sql injection - handled by sqlite
