@@ -1,15 +1,69 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
-    <title>Session Token</title>
+  <meta charset="UTF-8">
+  <title>Enter Token</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(to right, #2c3e50, #4ca1af);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+    }
+
+    .box {
+      background: white;
+      padding: 40px 50px;
+      border-radius: 10px;
+      box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
+      color: #2c3e50;
+      text-align: center;
+      width: 400px;
+    }
+
+    .box h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background-color: #1f5d87;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #14405e;
+    }
+  </style>
 </head>
-
 <body>
-    <p>Your generated token is: <strong>{{ generated_token }}</strong></p>
-
-    <form action="/get_token/{{ user_id }}" method="post">
-        <button type="submit">Continue to voting screen</button>
+  <div class="box">
+    <h2>Enter Your Token</h2>
+    <form method="POST">
+      <input type="text" name="token" placeholder="Token" required>
+      <button type="submit" class="button">Submit</button>
     </form>
+  </div>
 </body>
-
 </html>
