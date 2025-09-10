@@ -1,25 +1,147 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
-    <title>VOTING 2025</title>
+  <meta charset="UTF-8">
+  <title>Vote for Your Candidate</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #4ca1af);
+      height: 100vh;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10%;
+      color: white;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .left-panel .icon {
+      background-color: white;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .left-panel .icon img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .left-panel h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .vote-box {
+      background: white;
+      color: #333;
+      padding: 40px;
+      border-radius: 10px;
+      width: 420px;
+      box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .vote-box h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .vote-box label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    input[type="radio"] {
+      margin-right: 8px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 12px 12px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 5px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      color: #333;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background-color: #1f5d87;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #144768;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .left-panel {
+        align-items: center;
+        margin-bottom: 30px;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <h1>Vote for your candidate</h1>
+  <div class="left-panel">
+    <div class="icon">
+      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="lock icon">
+    </div>
+    <h1>VOTING SYSTEM</h1>
+  </div>
 
+  <div class="vote-box">
+    <h2>Vote for your candidate</h2>
     <form action="/vote/{{ user_id }}" method="post">
-        <input type="radio" name="option" value="Bob" required> Bob<br>
-        <input type="radio" name="option" value="John"> John<br>
-        <input type="radio" name="option" value="Alice"> Alice<br>
-        <input type="radio" name="option" value="Jack"> Jack<br>
-        <input type="radio" name="option" value="Eric"> Eric<br>
-        <input type="radio" name="option" value="Hillary"> Hillary<br>
+      <label><input type="radio" name="option" value="Bob" required> Bob</label>
+      <label><input type="radio" name="option" value="John"> John</label>
+      <label><input type="radio" name="option" value="Alice"> Alice</label>
+      <label><input type="radio" name="option" value="Jack"> Jack</label>
+      <label><input type="radio" name="option" value="Eric"> Eric</label>
+      <label><input type="radio" name="option" value="Hillary"> Hillary</label>
 
-        <label for="token_verify">Token:</label>
-        <input type="text" id="token_verify" name="token" required>
+      <label for="token_verify">Token:</label>
+      <input type="text" id="token_verify" name="token" placeholder="Enter your session token" required>
 
-        <button type="submit">Submit Vote</button>
+      <button class="button" type="submit">Submit Vote</button>
     </form>
+  </div>
 </body>
-
 </html>
