@@ -56,7 +56,7 @@
       padding: 40px;
       border-radius: 10px;
       width: 420px;
-    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
+      box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
     }
 
     .login-box h2 {
@@ -83,7 +83,6 @@
       border: 1px solid #ccc;
       border-radius: 6px;
       font-size: 14px;
-      box-sizing: border-box;
       color: #333;
     }
 
@@ -101,15 +100,7 @@
     }
 
     .button:hover {
-      background-color: #1f5d87;
-    }
-
-    .secondary-button {
-      background-color: #1f5d87;
-    }
-
-    .secondary-button:hover {
-      background-color: #5d6d6d;
+      background-color: #144768;
     }
 
     @media (max-width: 768px) {
@@ -118,13 +109,47 @@
         justify-content: center;
         padding: 20px;
       }
+
       .left-panel {
         align-items: center;
         margin-bottom: 30px;
       }
     }
   </style>
+
+<script>
+        // javascript function to send response back to backend and generate OTP
+        async function Generate_OTP() {
+            // retrieve the id field and make sure it exists
+            const userId = document.getElementById("id").value;
+
+            if (!userId) {
+                alert("Please enter your ID first in order to generate new OTP");
+                return;
+            }
+
+            try {
+                // send request to back end
+                const response = await fetch("/generate_otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                // if response it ok and valid, send the OTP
+                if (response.ok) {
+                    const data = await response.json();
+                    alert("New OTP generated: " + data.otp + "\ncheck your mobile phone/email in real time scenario");
+                } else {
+                    alert("Failed to generate OTP");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error generating OTP");
+            }
+        }
+    </script>
 </head>
+
 <body>
   <div class="left-panel">
     <div class="icon">
@@ -135,23 +160,22 @@
 
   <div class="login-box">
     <h2>LOGIN</h2>
-    <form method="POST">
+    <form action="/sign_in" method="post">
       <label for="id">ID:</label>
       <div class="input-group">
         <i class="fas fa-user"></i>
-        <input type="text" name="id" id="id" placeholder="ID" required>
+        <input type="text" id="id" name="user_id" placeholder="Enter your ID" required>
       </div>
 
-      <label for="otp">One-Time Password (OTP):</label>
+      <label for="OTP">One-Time Password (OTP):</label>
       <div class="input-group">
         <i class="fas fa-key"></i>
-        <input type="text" name="otp" id="otp" placeholder="OTP" required>
+        <input type="text" id="OTP" name="user_otp" placeholder="Enter OTP" required>
       </div>
 
       <button class="button" type="submit">Confirm Id and OTP</button>
-      <button class="button secondary-button" type="submit" formaction="/generate_otp">Generate OTP</button>
+      <button class="button" type="button" onclick="Generate_OTP()">Generate OTP</button>
     </form>
-
   </div>
 </body>
 </html>
