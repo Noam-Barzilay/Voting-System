@@ -1,74 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Vote</title>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: linear-gradient(to right, #2c3e50, #4ca1af);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: white;
-    }
-
-    .box {
-      background: white;
-      padding: 40px 50px;
-      border-radius: 10px;
-      box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
-      color: #2c3e50;
-      text-align: left;
-      width: 420px;
-    }
-
-    .box h1 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    label {
-      display: block;
-      margin: 12px 0;
-      font-size: 18px;
-    }
-
-    input[type="radio"] {
-      margin-right: 10px;
-    }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #1f5d87;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-
-    button:hover {
-      background-color: #14405e;
-    }
-  </style>
+    <title>VOTING 2025</title>
 </head>
+
 <body>
-  <div class="box">
-    <h1>Vote for Your Candidate</h1>
+    <h1>Vote for your candidate</h1>
+
     <form action="/vote/{{ user_id }}" method="post">
-      <label><input type="radio" name="option" value="Bob" required> Bob</label>
-      <label><input type="radio" name="option" value="John"> John</label>
-      <label><input type="radio" name="option" value="Alice"> Alice</label>
-      <label><input type="radio" name="option" value="Jack"> Jack</label>
-      <label><input type="radio" name="option" value="Eric"> Eric</label>
-      <label><input type="radio" name="option" value="Hillary"> Hillary</label>
-      <button type="submit">Submit Vote</button>
+        <input type="radio" name="option" value="Bob" required> Bob<br>
+        <input type="radio" name="option" value="John"> John<br>
+        <input type="radio" name="option" value="Alice"> Alice<br>
+        <input type="radio" name="option" value="Jack"> Jack<br>
+        <input type="radio" name="option" value="Eric"> Eric<br>
+        <input type="radio" name="option" value="Hillary"> Hillary<br>
+
+        <label for="token_verify">Token:</label>
+        <input type="text" id="token_verify" name="token" required>
+
+        <button type="submit">Submit Vote</button>
     </form>
-  </div>
 </body>
+
 </html>
