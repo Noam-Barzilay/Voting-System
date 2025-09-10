@@ -1,8 +1,123 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
-    <title>VOTING 2025</title>
-    <script>
+  <meta charset="UTF-8">
+  <title>Secure Voting Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #2c3e50, #4ca1af);
+      height: 100vh;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10%;
+      color: white;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .left-panel .icon {
+      background-color: white;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .left-panel .icon img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .left-panel h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .login-box {
+      background: white;
+      color: #333;
+      padding: 40px;
+      border-radius: 10px;
+      width: 420px;
+      box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .input-group i {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      color: #bbb;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 12px 12px 36px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background-color: #1f5d87;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #144768;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .left-panel {
+        align-items: center;
+        margin-bottom: 30px;
+      }
+    }
+  </style>
+
+<script>
         // javascript function to send response back to backend and generate OTP
         async function Generate_OTP() {
             // retrieve the id field and make sure it exists
@@ -20,7 +135,7 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ user_id: userId })
                 });
-                // if response is ok and valid, send the OTP
+                // if response it ok and valid, send the OTP
                 if (response.ok) {
                     const data = await response.json();
                     alert("New OTP generated: " + data.otp + "\ncheck your mobile phone/email in real time scenario");
@@ -29,33 +144,38 @@
                 }
             } catch (err) {
                 console.error(err);
-                alert("Invalid id or User already voted!");
+                alert("Error generating OTP");
             }
         }
     </script>
 </head>
 
 <body>
-    <h1>LOGIN</h1>
+  <div class="left-panel">
+    <div class="icon">
+      <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="lock icon">
+    </div>
+    <h1>VOTING SYSTEM</h1>
+  </div>
+
+  <div class="login-box">
+    <h2>LOGIN</h2>
     <form action="/sign_in" method="post">
+      <label for="id">ID:</label>
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input type="text" id="id" name="user_id" placeholder="Enter your ID" required>
+      </div>
 
-        <label for="id">Id:</label>
-        <input type="text" id="id" name="user_id" required>
-        
-        <br><br>
+      <label for="OTP">One-Time Password (OTP):</label>
+      <div class="input-group">
+        <i class="fas fa-key"></i>
+        <input type="text" id="OTP" name="user_otp" placeholder="Enter OTP" required>
+      </div>
 
-        <label for="OTP">OTP:</label>
-        <input type="text" id="OTP" name="user_otp" required>
-
-        <br><br>
-        
-        <button type="submit">confirm Id and OTP</button>
-
-        <br><br>
-
-        <button type="button" onclick="Generate_OTP()">Generate OTP</button>
+      <button class="button" type="submit">Confirm Id and OTP</button>
+      <button class="button" type="button" onclick="Generate_OTP()">Generate OTP</button>
     </form>
-    
+  </div>
 </body>
-
 </html>
