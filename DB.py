@@ -4,21 +4,24 @@ import hmac
 import hashlib
 from constants import HASH_ID_SERVER_KEY
 import os
-from ciphers import candidates_cipher, ids_cipher
-
+# from ciphers import candidates_cipher, ids_cipher
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from dotenv import load_dotenv
+import base64
 
 # encrypt all database (besides hash value of id)
-# have a different key for each table
 # never reuse the same nonce with the same key, but store the nonce publicly
-# with each enryption to insert/update database - generate newe nonce and encrypt all row back (besides hash)
+# with each enryption to insert/update database - generate new nonce and encrypt all row back (besides hash)
+
 
 def db_init():
+    load_dotenv()
     # Connect to database
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
 
     # Create Candidates table
-    # (candidate, number of votes they got, nonce of the row)
+    # (candidate, number of votes they got, nonce)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Candidates (
         name TEXT PRIMARY KEY,
@@ -26,6 +29,10 @@ def db_init():
         nonce TEXT
     )
     """)
+
+    # create cipher
+    aes_key = base64.b64decode(os.getenv("CANDIDATES_CIPHER_KEY"))
+    candidates_cipher = AESGCM(aes_key)
 
     # create the rows in Candidates
     for name in constants.candidates:
@@ -41,7 +48,7 @@ def db_init():
 
 
     # Create Ids table
-    # (HMAC secure hash of user's id, voted (1 - yes, 0 - no), OTP, expire time of OTP)
+    # (HMAC secure hash of user's id, voted (1 - yes, 0 - no), OTP, expire time of OTP, nonce)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS Ids (
         id_hash TEXT PRIMARY KEY,
@@ -55,14 +62,21 @@ def db_init():
     # create the rows in Ids
     for id_ in constants.ids:
         nonce = os.urandom(12)
-        id_hash = hmac.new(HASH_ID_SERVER_KEY, id_.encode(), hashlib.sha256).hexdigest()
+
+        hmac_key = base64.b64decode(os.getenv(f"{id_}_HMAC_KEY"))
+
+        id_hash = hmac.new(hmac_key, id_.encode(), hashlib.sha256).hexdigest()
+
+        # create cipher
+        aes_key = base64.b64decode(os.getenv(f"{id_}_AES_KEY"))
+        user_cipher = AESGCM(aes_key)
 
         # customized user tag
-        voted_encrypted = ids_cipher.encrypt(nonce, b'0', f"ids_table,hash={id_hash}".encode())
-        otp_encrypted = ids_cipher.encrypt(nonce, b'dummy', f"ids_table,hash={id_hash}".encode())
+        voted_encrypted = user_cipher.encrypt(nonce, b'0', f"ids_table,hash={id_hash}".encode())
+        otp_encrypted = user_cipher.encrypt(nonce, b'dummy', f"ids_table,hash={id_hash}".encode())
 
         # expire_time need to be casted to int after decryption
-        expire_time_encrypted = ids_cipher.encrypt(nonce, b'00', f"ids_table,hash={id_hash}".encode())
+        expire_time_encrypted = user_cipher.encrypt(nonce, b'00', f"ids_table,hash={id_hash}".encode())
 
         # Insert data - use (?) to avoid sql injection - handled by sqlite
         cursor.execute("INSERT INTO Ids (id_hash, voted, OTP, expire_time, nonce) VALUES (?, ?, ?, ?, ?)",
@@ -104,25 +118,25 @@ def display_db():
     rows = cursor.fetchall()
     print("Candidates table:")
     for row in rows:
-        print(row)
+        print(*row)
 
     cursor.execute("SELECT * FROM Ids")
     rows = cursor.fetchall()
     print("Ids table:")
     for row in rows:
-        print(row)
+        print(*row)
 
     cursor.execute("SELECT * FROM Tokens")
     rows = cursor.fetchall()
     print("Tokens table:")
     for row in rows:
-        print(row)
+        print(*row)
 
     cursor.execute("SELECT * FROM Signatures")
     rows = cursor.fetchall()
     print("Signatures table:")
     for row in rows:
-        print(row)
+        print(*row)
 
     conn.close()
 
