@@ -2,9 +2,8 @@ import sqlite3
 import constants
 import hmac
 import hashlib
-from constants import HASH_ID_SERVER_KEY
+import constants
 import os
-# from ciphers import candidates_cipher, ids_cipher
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from dotenv import load_dotenv
 import base64
