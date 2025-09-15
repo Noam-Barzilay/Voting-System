@@ -16,8 +16,6 @@ import base64
 app = Flask(__name__)
 DB_FILE = 'database.db'
 
-# TODO: need to decrypt retrieved rows and encrypt them back (besides hash value of id)
-
 # function to generate token for voter's session
 def generate_session_token():
     token = secrets.token_hex(32)
