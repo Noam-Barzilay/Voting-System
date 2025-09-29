@@ -94,21 +94,10 @@ def db_init():
     # when user grants access to voting system, generate token and give it to them
     # insert only then to this table
 
-    # Create voting table
-    # (token hash (HMAC), signature of confirming the voting)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Signatures (
-        token_hash TEXT,
-        signature TEXT,
-        FOREIGN KEY (token_hash) REFERENCES Tokens(token_hash)
-    )
-    """)
-    # after user votes, sign by their name with the systems private key by associating the token used
-
     conn.close()
 
 
-def display_db():
+def display_raw_db():
     # Connect to database
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
@@ -131,13 +120,48 @@ def display_db():
     for row in rows:
         print(*row)
 
-    cursor.execute("SELECT * FROM Signatures")
-    rows = cursor.fetchall()
-    print("Signatures table:")
-    for row in rows:
-        print(*row)
 
     conn.close()
+
+def display_decrypted_db():
+    # SHOW DATABASE - decrypted (candidates and ids)
+    
+    load_dotenv()
+    # Connect to database
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM Candidates")
+    rows = cursor.fetchall()
+    print("Candidates table:")
+
+    # get key and build cipher of candidates table
+    aes_key = base64.b64decode(os.getenv("CANDIDATES_CIPHER_KEY"))
+    candidate_cipher = AESGCM(aes_key)
+
+    for row in rows:
+        name, votes, nonce = row
+
+        votes = int(candidate_cipher.decrypt(nonce, votes, f"candidates_table,name={name}".encode()).decode())
+        print(name, votes, nonce)
+
+
+    cursor.execute("SELECT * FROM Ids")
+    rows = cursor.fetchall()
+    print("Ids table:")
+
+    for i in range(1, len(rows) + 1):
+        id_hash, voted, otp, expire_time, nonce = rows[i-1]
+
+        # get key and build cipher of candidates table
+        aes_key = base64.b64decode(os.getenv(f"{i}_AES_KEY"))
+        user_cipher = AESGCM(aes_key)
+
+        voted = user_cipher.decrypt(nonce, voted, f"ids_table,hash={id_hash}".encode()).decode()
+        otp = user_cipher.decrypt(nonce, otp, f"ids_table,hash={id_hash}".encode()).decode()
+        expire_time = int(user_cipher.decrypt(nonce, expire_time, f"ids_table,hash={id_hash}".encode()).decode())
+
+        print(id_hash, voted, otp, expire_time, nonce)
 
 
 def clear_db():
@@ -149,10 +173,6 @@ def clear_db():
     cursor.execute("DROP TABLE IF EXISTS Ids")
     conn.commit()
     cursor.execute("DROP TABLE IF EXISTS Tokens")
-    conn.commit()
-    cursor.execute("DROP TABLE IF EXISTS Signatures")
-    conn.commit()
-    cursor.execute("DROP TABLE IF EXISTS Otps")
     conn.commit()
 
     conn.close()
