@@ -22,7 +22,3 @@ def generate_keys():
 
         # server key to encrypt/decrypt candidates table rows
         f.write(f"CANDIDATES_CIPHER_KEY={base64.b64encode(AESGCM.generate_key(128)).decode()}\n")
-
-
-if __name__ == "__main__":
-    generate_keys()
