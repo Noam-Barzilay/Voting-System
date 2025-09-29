@@ -178,7 +178,6 @@ def get_token(user_id):
 
         # update DB 
         # insert into tokens table
-        #TODO: maybe encrypt used
         cursor.execute("INSERT INTO Tokens (token_hash, used) VALUES (?, ?)", (hashed_token, '0'))
         conn.commit()
         
@@ -235,10 +234,8 @@ def vote(user_id):
         cursor.execute("SELECT * FROM Tokens WHERE token_hash=(?)", (hashed_token,))
         token_rows = cursor.fetchall()
 
-        if len(token_rows) > 0 and token_rows[0][1] == '1':
-            return "Token already used"
-        
-        if len(token_rows) == 0:
+        # case of invalid token
+        if (len(token_rows) > 0 and token_rows[0][1] == '1') or len(token_rows) == 0:
             return "Invalid token"
 
         # find candidate information
